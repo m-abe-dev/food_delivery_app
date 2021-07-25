@@ -1,44 +1,50 @@
-import React, { Fragment, useEffect, useReducer } from "react";
+import React, { Fragment, useEffect, useReducer, useState } from "react";
 import { Link } from "react-router-dom";
-import styled from 'styled-components'
-import { COLORS } from '../style_constants';
+import styled from "styled-components";
+import { COLORS } from "../style_constants";
 
 // components
-import { LocalMallIcon } from '../components/Icons';
-import { FoodWrapper } from '../components/FoodWrapper';
-import Skeleton from '@material-ui/lab/Skeleton';
+import { LocalMallIcon } from "../components/Icons";
+import { FoodWrapper } from "../components/FoodWrapper";
+import Skeleton from "@material-ui/lab/Skeleton";
+import { FoodOrderDialog } from '../components/FoodOrderDialog';
 
 // images
-import MainLogo from '../images/logo.png';
-import FoodImage from '../images/food-image.jpg';
+import MainLogo from "../images/logo.png";
+import FoodImage from "../images/food-image.jpg";
 
 // reducers
 import {
   initialState as foodsInitialState,
   foodsActionTypes,
   foodsReducer,
-} from '../reducers/foods';
+} from "../reducers/foods";
 
 // apis
 import { fetchFoods } from "../apis/foods";
 
 // constants
-import { REQUEST_STATE } from '../constants';
-
+import { REQUEST_STATE } from "../constants";
 
 export const Foods = ({ match }) => {
   const [foodsState, dispatch] = useReducer(foodsReducer, foodsInitialState);
+  const initialState = {
+    isOpenOrderDialog: false,
+    selectedFood: null,
+    selectedFoodCount: 1,
+  };
+  const [state, setState] = useState(initialState);
+
   useEffect(() => {
     dispatch({ type: foodsActionTypes.FETCHING });
-    fetchFoods(match.params.restaurantsId)
-      .then((data) => {
-        dispatch({
-          type: foodsActionTypes.FETCH_SUCCESS,
-          payload: {
-            foods: data.foods
-          }
-        });
-      })
+    fetchFoods(match.params.restaurantsId).then((data) => {
+      dispatch({
+        type: foodsActionTypes.FETCH_SUCCESS,
+        payload: {
+          foods: data.foods,
+        },
+      });
+    });
   }, []);
 
   return (
@@ -54,34 +60,49 @@ export const Foods = ({ match }) => {
         </BagIconWrapper>
       </HeaderWrapper>
       <FoodsList>
-        {
-          foodsState.fetchState === REQUEST_STATE.LOADING ?
-            <Fragment>
-              {
-                // => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-                [...Array(12).keys()].map(i =>
-                  <ItemWrapper key={i}>
-                    <Skeleton key={i} variant="rect" width={450} height={180} />
-                  </ItemWrapper>
-                )
-              }
-            </Fragment>
-          :
-            foodsState.foodsList.map(food =>
-              <ItemWrapper key={food.id}>
-                <FoodWrapper
-                  food={food}
-                  onClickFoodWrapper={(food) => console.log(food)}
-                  imageUrl={FoodImage}
-                />
-              </ItemWrapper>
-            )
-        }
+        {foodsState.fetchState === REQUEST_STATE.LOADING ? (
+          <Fragment>
+            {
+              // => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+              [...Array(12).keys()].map((i) => (
+                <ItemWrapper key={i}>
+                  <Skeleton key={i} variant="rect" width={450} height={180} />
+                </ItemWrapper>
+              ))
+            }
+          </Fragment>
+        ) : (
+          foodsState.foodsList.map((food) => (
+            <ItemWrapper key={food.id}>
+              <FoodWrapper
+                food={food}
+                onClickFoodWrapper={(food) =>
+                  setState({
+                    ...state,
+                    isOpenOrderDialog: true,
+                    selectedFood: food,
+                  })
+                }
+                imageUrl={FoodImage}
+              />
+            </ItemWrapper>
+          ))
+        )}
       </FoodsList>
+      {
+        state.isOpenOrderDialog &&
+          <FoodOrderDialog
+            food={state.selectedFood}
+            isOpen={state.isOpenOrderDialog}
+            onClose={() => setState({
+              ...state,
+              isOpenOrderDialog: false,
+            })}
+          />
+      }
     </Fragment>
-  )
+  );
 };
-
 
 const HeaderWrapper = styled.div`
   display: flex;
@@ -97,7 +118,7 @@ const ColoredBagIcon = styled(LocalMallIcon)`
 `;
 const MainLogoImage = styled.img`
   height: 90px;
-`
+`;
 
 const FoodsList = styled.div`
   display: flex;
